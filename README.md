@@ -1,3 +1,19 @@
+Wall of CRTs with a camera that takes a photo when you show the OK sign
+Aka CRT Photobooth
+For the MADE in Oakland, CA
+
+Started with Mediapipe, but it didn't work on the Raspberry Pi 4 that we're using. So switched to the project shown below. 
+
+
+
+
+
+Fork of Mr Kaxuhuto's project
+Retrained to add the OK symbol
+Takes a snapshot when the OK symbol is shown
+
+
+
 [Japanese / [English](./README_en.md)]
 
 ---
