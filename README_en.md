@@ -1,5 +1,9 @@
 [[Japanese](./README.md) / English]
+Wall of CRTs with a camera that takes a photo when you show the OK sign Aka CRT Photobooth For the MADE in Oakland, CA
 
+Started with Mediapipe, but it didn't work on the Raspberry Pi 4 that we're using. So switched to the project shown below.
+
+Fork of Mr Kaxuhuto's project Retrained to add the OK symbol Takes a snapshot when the OK symbol is shown
 ---
 # hand-gesture-recognition-using-onnx
 [Kazuhito00/hand-gesture-recognition-using-mediapipe](https://github.com/Kazuhito00/hand-gesture-recognition-using-mediapipe) This repository replaces the entire MediaPipe implementation with ONNX, borrowing from [@Kazuhito00](https://github.com/Kazuhito00). This is a sample program that recognizes hand signs and finger gestures using a simple MLP. The only thing I've confirmed so far is that it works.
