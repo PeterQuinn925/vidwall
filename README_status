@@ -1,0 +1,104 @@
+8/17/26 Current state:
+I made one more composite cable and found another that was already working. We don't have enough good raspberry pi 2 power supplies. The USB mini cables plus phone charger plugs kinda sorta work, but not reliably. And we don't have enough that even work sorta. I need to change how the networking works if we're going to use Jesse's switch as it doesn't do multicasting. I don't think it's a big deal to make the change, but I didn't test it. And, we need to use Jesse's switch if we're going to have more than 3 CRTs. I also need to do some optimization on the resolution/cropping coordinates. The way it's set up now has blank space at bottom 1/4 or so of the monitors that's just wasted. Also the program that takes a snapshot with a hand gesture is not at all working. I will do some more investigation here at home on that front. Lastly, we need a printer. 
+
+8/21 Tried a different ML system that will run on the PI and attempted to train it to recognize the OK sign. It does not. However, it is much more capable of detecting fingers/hand than the previous method, so I’m going to implement it. When I do, it will take a snapshot when it sees a closed fist. 
+
+Plan is to follow the instructions from https://piwall.co.uk/
+These instructions are old and need to be modernized, but basically what we want to do on the CRT wall side of things.
+
+There will be 3 things running on the master Raspberry PI 4:
+
+rpicam-vid command. This creates a low res and high res stream. The high res stream goes to the network for display on the CRTs. The low res goes to the OK sign detection program.
+There is a script in the /home/pi directory rpicam.sh. The guts of it are a command: rpicam-vid -t 0 -n --width 1280  --height 720 --framerate 25 --intra 15 -o - | ffmpeg -i - -vcodec copy -f mpegts -pkt_size 1316 udp://239.0.1.23:1234
+There is a daemon rpicam.service that runs on boot to start/restart this script. 
+Cam_thumbsup_snapshot.py This python program watches the lowres stream and when it detects a thumbs up sign with a person’s hands, it takes a snapshot and saves it as a jpg
+Code is listed below. 
+There is a daemon that runs a script that starts this code called thumbsup.service
+AsciiArt.py This program watches for the existence of a snapshot jpg, converts it into a txt file and sends it to the printer. When done, it erases both and waits for another. <<not yet implemented. Waiting on a printer>>
+
+Each CRT Raspberry Pi 2 will runs a script called /home/pi/vid_ffmpeg.sh. There is a daemon that starts this script on boot called vidwall.service. The Pis are named CRT1, CRT2, CRT3, CRT4. Additional ones could be added. The active ingredient of the vid_ffmpeg script is 
+
+ ffmpeg -loglevel quiet -nostats -c:v h264_v4l2m2m -i udp://239.0.1.23:1234 \
+  -vf "crop=640:360:0:0,format=bgra" \
+  -f fbdev /dev/fb0
+
+The crop=640:360:0:0 is to chop the 1280 x720 full feed into the desired quadrant.
+CRT1 Top Left 640:360:0:0 
+CRT2 Top Right 640:360:640:0
+CRT3 Bottom Left 640:360:0:360 
+CRT4 Bottom Right  640:360:640:360 
+For some reason, the format is different for CRT2-4. Same command except format=rgb565le
+
+Printer Manual: https://bitsavers.org/pdf/dec/terminal/la100/EK-LW100-OP-001_Letterwriter_100_Operators_Guide_Jun82.pdf
+
+
+TODO:
+Get 5 power supplies/cables for Raspberry Pis
+Get Composite video cables and test with PIs
+For each CRT Pi
+In /boot/firmware/config.txt, do NOT add the vc4-kms-v3d,composite overlay. Instead add: enable_tvout=1 and sdtv_mode=0. Leave cmdline.txt untouched -- no video= or vc4.tv_norm additions needed on this legacy path. 
+Run sudo raspi-config -> System Options -> Boot / Auto Login -> Console Autologin 
+sudo apt install ffmpeg 
+Create a shell script for ffmpeg -loglevel quiet -nostats -c:v h264_v4l2m2m -i udp://239.0.1.23:1234 -vf "crop=640:360:640:0 ,format=bgra" -f fbdev /dev/fb0
+CRT1 Top Left 640:360:0:0 
+CRT2 Top Right 640:360:640:0
+CRT3 Bottom Left 640:360:0:360 
+CRT4 Bottom Right  640:360:640:360 
+Create a systemd daemon to run the script
+Done - but something doesn’t work for all except CRT1
+
+
+Get network switch and cables
+Figure out how to power everything (4 CRTs, 5 PIs, network switch, printer) 11 total power outlets.
+Write wrapper to detect JPG and call JPG to TXT Ascii magic program and then send to printer.
+Test Printer. Get ink and paper.
+	We’re going to go with a simpler option for the first iteration. The DEC teletype did not work immediately and with all the other tasks, we’re going to try a thermal printer to start.
+Get printer cabling (can borrow mine for a test, but the MADE will need it’s own)
+
+
+Python libraries required:
+opencv-python
+numpy 
+ascii-magic
+pillow 
+
+To install: Pip3 install opencv-python numpy ascii-magic pillow
+
+Will need to set up a virtual environment for this using VENV.
+
+
+In the meantime, I’m working on the ASCII art side of things. Take a jpg and turn it into a stream of text characters we can send to an old lineprinter.
+
+Looks like there is a library already doing this called Ascii Magic. https://www.ascii-magic.com/ 
+
+from ascii_magic import AsciiArt
+art = AsciiArt.from_image('test.jpg')
+art.to_file('test.txt',monochrome=True)
+
+This works, but I think it will look better with more contrast. 
+
+Test code that works reasonably well
+from ascii_magic import AsciiArt
+from PIL import Image, ImageEnhance
+
+img = Image.open("c:/users/peter/test.jpg")
+contrast_enhancer = ImageEnhance.Contrast(img)
+img = contrast_enhancer.enhance(2.5)  # Try values between 1.5 and 3.0
+brightness_enhancer = ImageEnhance.Brightness(img)
+img = brightness_enhancer.enhance(1.2)  # Try values between 1.0 and 1.5
+art = AsciiArt.from_pillow_image(img)
+art.to_file("c:/users/peter/test.txt",columns=132, monochrome=True)
+
+
+
+
+
+I made an adaptor for a suction cup camera/antenna mount. Maybe 3D printing would be better.
+
+
+Pinout for composite cable
+
+4 goes to the tip of the yellow video cable
+3 goes to the outside of the yellow video cable
+
+The one the I have is backwards - it has 4 to the outside and 3 to the tip
